@@ -1,0 +1,1192 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#020617">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="manifest" href="./manifest.webmanifest">
+    <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="./icons/icon.svg">
+    <title>Mr. Zinger - Restaurant POS & Management System</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        brand: {
+                            50: '#fff7ed',
+                            100: '#ffedd5',
+                            500: '#f97316',
+                            600: '#ea580c',
+                            700: '#c2410c',
+                            900: '#7c2d12',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+        @media print {
+            body * { visibility: hidden !important; }
+            #thermalPrintArea, #thermalPrintArea * { visibility: visible !important; }
+            #thermalPrintArea {
+                display: block !important;
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 80mm !important;
+                background: white !important;
+                color: black !important;
+                padding: 10px !important;
+                font-family: 'Courier New', Courier, monospace !important;
+                z-index: 999999 !important;
+            }
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans h-full overflow-hidden flex flex-col">
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="fixed top-5 right-5 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+    <!-- ==================== LOGIN SCREEN ==================== -->
+    <div id="loginScreen" class="fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-xl flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-8 max-w-md w-full shadow-2xl relative overflow-hidden">
+            <div class="absolute -top-16 -right-16 w-32 h-32 bg-orange-500/20 rounded-full blur-2xl pointer-events-none"></div>
+            
+            <div class="text-center mb-8">
+                <div class="w-20 h-20 bg-gradient-to-tr from-orange-600 to-amber-500 rounded-2xl mx-auto flex items-center justify-center shadow-lg shadow-orange-500/30 mb-4 border border-orange-400/30">
+                    <i class="fa-solid fa-burger text-3xl text-white"></i>
+                </div>
+                <h1 class="text-2xl font-black text-white tracking-tight">MR. ZINGER POS</h1>
+                <p class="text-xs text-slate-400 mt-1">Professional Restaurant Management Suite</p>
+            </div>
+
+            <form onsubmit="handleLogin(event)" class="space-y-5">
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Username / Admin ID</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-4 flex items-center text-slate-500"><i class="fa-solid fa-user-shield"></i></span>
+                        <input type="text" id="loginUsername" required value="admin" class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-11 pr-4 py-3 text-sm text-white focus:outline-none focus:border-orange-500 transition">
+                    </div>
+                </div>
+
+                <div id="loginError" class="hidden text-xs text-red-400 text-center font-medium bg-red-500/10 border border-red-500/20 p-2.5 rounded-lg">
+                    Invalid credentials. Use Username: <strong class="text-white">admin</strong>
+                </div>
+
+                <button type="submit" class="w-full bg-gradient-to-r from-orange-600 to-amber-500 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg shadow-orange-600/30 hover:opacity-95 transition transform active:scale-95">
+                    Secure Login <i class="fa-solid fa-arrow-right ml-2"></i>
+                </button>
+            </form>
+            <div class="mt-6 text-center text-[11px] text-slate-500">
+                Default Admin: <span class="text-slate-300 font-mono">admin</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== MAIN APP WRAPPER ==================== -->
+    <div id="appWrapper" class="hidden flex-1 flex flex-col h-full overflow-hidden">
+        
+        <!-- Top Navbar -->
+        <header class="bg-slate-900 border-b border-slate-800 px-6 py-3 flex items-center justify-between shrink-0">
+            <div class="flex items-center space-x-4">
+                <div class="w-10 h-10 rounded-xl overflow-hidden bg-slate-950 border border-slate-700 flex items-center justify-center shrink-0">
+                    <img id="navLogoImg" src="https://placehold.co/100x100/1e293b/f59e0b?text=Zinger" alt="Logo" class="w-full h-full object-cover">
+                </div>
+                <div>
+                    <h2 class="text-base font-extrabold text-white tracking-tight flex items-center gap-2">
+                        Mr. Zinger POS <span class="bg-orange-500/10 text-orange-400 text-[10px] px-2 py-0.5 rounded-full border border-orange-500/20 font-semibold">Live Pro</span>
+                    </h2>
+                    <p class="text-[11px] text-slate-400"><span id="navAddressDisplay">Pader Ground Okhai Colony Qasim Shah Road Near Hussissaini Masjid Keamari</span> • Cashier: <span class="text-orange-400 font-semibold">Faizan Junejo</span></p>
+                </div>
+            </div>
+
+            <!-- Navigation Tabs -->
+            <nav class="hidden md:flex items-center bg-slate-950 p-1.5 rounded-2xl border border-slate-800 space-x-1">
+                <button onclick="switchTab('pos')" id="tabBtn-pos" class="tab-btn px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 bg-orange-600 text-white shadow-md">
+                    <i class="fa-solid fa-cash-register"></i> POS Terminal
+                </button>
+                <button onclick="switchTab('menu')" id="tabBtn-menu" class="tab-btn px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white transition flex items-center gap-2">
+                    <i class="fa-solid fa-utensils"></i> Menu & Images
+                </button>
+                <button onclick="switchTab('inventory')" id="tabBtn-inventory" class="tab-btn px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white transition flex items-center gap-2">
+                    <i class="fa-solid fa-boxes-stacked"></i> Inventory
+                </button>
+                <button onclick="switchTab('reports')" id="tabBtn-reports" class="tab-btn px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white transition flex items-center gap-2">
+                    <i class="fa-solid fa-chart-pie"></i> Close Z-Report
+                </button>
+                <button onclick="switchTab('media')" id="tabBtn-media" class="tab-btn px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white transition flex items-center gap-2">
+                    <i class="fa-solid fa-images"></i> Media Manager
+                </button>
+            </nav>
+
+            <div class="flex items-center space-x-3">
+                <button onclick="openSettingsModal()" class="w-10 h-10 rounded-xl bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 transition flex items-center justify-center border border-slate-700" title="Settings & Logo">
+                    <i class="fa-solid fa-gear"></i>
+                </button>
+                <button onclick="logout()" class="w-10 h-10 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 transition flex items-center justify-center border border-red-500/20" title="Logout">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content View Area -->
+        <main class="flex-1 overflow-hidden relative bg-slate-950">
+            
+            <!-- ==================== TAB 1: POS TERMINAL ==================== -->
+            <div id="tabContent-pos" class="tab-content h-full flex flex-col md:flex-row">
+                <!-- Left: Menu Items Grid -->
+                <div class="flex-1 flex flex-col h-full overflow-hidden p-4 lg:p-6 border-r border-slate-800/80">
+                    <!-- Search & Filter Bar -->
+                    <div class="flex flex-col sm:flex-row gap-3 mb-4 shrink-0">
+                        <div class="relative flex-1">
+                            <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-500"><i class="fa-solid fa-search"></i></span>
+                            <input type="text" id="posSearch" oninput="filterPosMenu()" placeholder="Search burgers, broast, drinks..." class="w-full bg-slate-900 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white focus:outline-none focus:border-orange-500 transition">
+                        </div>
+                        <div class="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0" id="posCategoryFilters">
+                            <button onclick="setPosCategory('All')" class="pos-cat-btn px-3 py-2 rounded-xl text-xs font-bold bg-orange-600 text-white shrink-0 transition">All Items</button>
+                            <button onclick="setPosCategory('Burgers')" class="pos-cat-btn px-3 py-2 rounded-xl text-xs font-semibold bg-slate-900 text-slate-400 hover:text-white shrink-0 transition">Burgers</button>
+                            <button onclick="setPosCategory('Broast')" class="pos-cat-btn px-3 py-2 rounded-xl text-xs font-semibold bg-slate-900 text-slate-400 hover:text-white shrink-0 transition">Broast</button>
+                            <button onclick="setPosCategory('Deals')" class="pos-cat-btn px-3 py-2 rounded-xl text-xs font-semibold bg-slate-900 text-slate-400 hover:text-white shrink-0 transition">Deals</button>
+                            <button onclick="setPosCategory('Beverages')" class="pos-cat-btn px-3 py-2 rounded-xl text-xs font-semibold bg-slate-900 text-slate-400 hover:text-white shrink-0 transition">Beverages</button>
+                        </div>
+                    </div>
+
+                    <!-- Grid of Menu Items -->
+                    <div class="flex-1 overflow-y-auto pr-1">
+                        <div id="posMenuGrid" class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: Active Cart & Billing -->
+                <div class="w-full md:w-[380px] lg:w-[420px] bg-slate-900/80 backdrop-blur-md flex flex-col h-full border-t md:border-t-0 border-slate-800">
+                    <div class="p-4 border-b border-slate-800 flex items-center justify-between shrink-0">
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-receipt text-orange-500"></i>
+                            <h3 class="font-bold text-sm text-white">Current Order</h3>
+                        </div>
+                        <span id="orderIdBadge" class="bg-orange-500/10 text-orange-400 font-mono text-[11px] px-2.5 py-1 rounded-lg border border-orange-500/20 font-semibold">ORD-1001</span>
+                    </div>
+
+                    <!-- Cart Items List -->
+                    <div id="cartItemsList" class="flex-1 overflow-y-auto p-4 space-y-3">
+                        <!-- Empty cart state -->
+                        <div class="h-full flex flex-col items-center justify-center text-center text-slate-500 py-12">
+                            <i class="fa-solid fa-burger text-4xl mb-3 text-slate-700"></i>
+                            <p class="text-xs font-medium">Cart is empty</p>
+                            <p class="text-[10px] text-slate-600 mt-1">Tap any menu item to add to order</p>
+                        </div>
+                    </div>
+
+                    <!-- Cart Summary & Checkout -->
+                    <div class="p-4 border-t border-slate-800 bg-slate-950/50 shrink-0 space-y-3">
+                        <div class="space-y-1.5 text-xs">
+                            <div class="flex justify-between text-slate-400">
+                                <span>Subtotal</span>
+                                <span id="cartSubtotal" class="font-mono font-semibold text-white">Rs. 0</span>
+                            </div>
+                            <div class="flex justify-between text-slate-400">
+                                <span>GST (0%)</span>
+                                <span class="font-mono font-semibold text-white">Rs. 0</span>
+                            </div>
+                            <div class="flex justify-between text-sm font-bold text-white pt-2 border-t border-slate-800">
+                                <span>Total Payable</span>
+                                <span id="cartTotal" class="font-mono text-orange-400 text-base">Rs. 0</span>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-2 pt-1">
+                            <button onclick="clearCart()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-2.5 px-3 rounded-xl text-xs transition border border-slate-700">
+                                <i class="fa-solid fa-trash-can mr-1.5"></i> Clear
+                            </button>
+                            <button onclick="processCheckout()" class="bg-gradient-to-r from-orange-600 to-amber-500 hover:opacity-95 text-white font-bold py-2.5 px-3 rounded-xl text-xs shadow-lg shadow-orange-600/30 transition flex items-center justify-center gap-1.5">
+                                <i class="fa-solid fa-print"></i> Print Bill & Pay
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== TAB 2: MENU & IMAGE MANAGEMENT ==================== -->
+            <div id="tabContent-menu" class="tab-content h-full hidden flex flex-col p-6 overflow-hidden">
+                <div class="flex items-center justify-between mb-6 shrink-0">
+                    <div>
+                        <h2 class="text-xl font-black text-white tracking-tight">Menu & Image Management</h2>
+                        <p class="text-xs text-slate-400 mt-0.5">Add, edit or upload images for burgers, broast and meals</p>
+                    </div>
+                    <button onclick="openMenuItemModal()" class="bg-orange-600 hover:bg-orange-500 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition shadow-lg shadow-orange-600/30 flex items-center gap-2">
+                        <i class="fa-solid fa-plus"></i> Add New Menu Item
+                    </button>
+                </div>
+
+                <div class="flex-1 overflow-y-auto bg-slate-900 border border-slate-800 rounded-2xl shadow-xl">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-950/80 text-slate-400 text-[11px] uppercase tracking-wider border-b border-slate-800">
+                                <th class="p-3.5">Image</th>
+                                <th class="p-3.5">Item Name</th>
+                                <th class="p-3.5">Category</th>
+                                <th class="p-3.5">Price (PKR)</th>
+                                <th class="p-3.5">Item Code</th>
+                                <th class="p-3.5 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="menuTableBody" class="divide-y divide-slate-800 text-xs">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ==================== TAB 3: INVENTORY MODULE ==================== -->
+            <div id="tabContent-inventory" class="tab-content h-full hidden flex flex-col p-6 overflow-hidden">
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 shrink-0">
+                    <div>
+                        <h2 class="text-xl font-black text-white tracking-tight">Daily & Monthly Inventory System</h2>
+                        <p class="text-xs text-slate-400 mt-0.5">Track stock levels, raw ingredients usage, and stock adjustments</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="openInventoryModal()" class="bg-orange-600 hover:bg-orange-500 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition shadow-lg shadow-orange-600/30 flex items-center gap-2">
+                            <i class="fa-solid fa-plus"></i> Add Ingredient / Stock
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 shrink-0">
+                    <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl">
+                        <span class="text-xs text-slate-400 font-medium">Total Inventory Items</span>
+                        <h3 id="invTotalCount" class="text-2xl font-black text-white mt-1">0</h3>
+                    </div>
+                    <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl">
+                        <span class="text-xs text-slate-400 font-medium">Low Stock Alerts</span>
+                        <h3 id="invLowStockCount" class="text-2xl font-black text-amber-400 mt-1">0</h3>
+                    </div>
+                    <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl">
+                        <span class="text-xs text-slate-400 font-medium">Estimated Inventory Value</span>
+                        <h3 id="invTotalVal" class="text-2xl font-black text-emerald-400 mt-1">Rs. 0</h3>
+                    </div>
+                </div>
+
+                <div class="flex-1 overflow-y-auto bg-slate-900 border border-slate-800 rounded-2xl shadow-xl">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-950/80 text-slate-400 text-[11px] uppercase tracking-wider border-b border-slate-800">
+                                <th class="p-3.5">Item Name</th>
+                                <th class="p-3.5">Category</th>
+                                <th class="p-3.5">Stock Quantity</th>
+                                <th class="p-3.5">Unit</th>
+                                <th class="p-3.5">Unit Price (Rs.)</th>
+                                <th class="p-3.5">Status</th>
+                                <th class="p-3.5 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inventoryTableBody" class="divide-y divide-slate-800 text-xs">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ==================== TAB 4: CLOSE Z-REPORT & DAILY SALES ==================== -->
+            <div id="tabContent-reports" class="tab-content h-full hidden flex flex-col p-6 overflow-y-auto">
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 shrink-0">
+                    <div>
+                        <h2 class="text-xl font-black text-white tracking-tight">Daily Sales & Close Z-Report</h2>
+                        <p class="text-xs text-slate-400 mt-0.5">Itemized breakdown of exact quantities sold (e.g. Zinger Burgers sold today)</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="printDailySalesReport()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold px-4 py-2.5 rounded-xl text-xs transition border border-slate-700 flex items-center gap-2">
+                            <i class="fa-solid fa-print"></i> Print Daily Z-Report
+                        </button>
+                        <button onclick="resetDailySales()" class="bg-red-500/10 hover:bg-red-500/20 text-red-400 font-bold px-4 py-2.5 rounded-xl text-xs transition border border-red-500/20 flex items-center gap-2">
+                            <i class="fa-solid fa-rotate-right"></i> End Shift / Reset Day
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Summary Metrics Cards -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 shrink-0">
+                    <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl">
+                        <span class="text-xs text-slate-400 font-medium">Today's Gross Sales</span>
+                        <h3 id="reportTotalSales" class="text-2xl font-black text-orange-400 mt-1 font-mono">Rs. 0</h3>
+                    </div>
+                    <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl">
+                        <span class="text-xs text-slate-400 font-medium">Total Orders Completed</span>
+                        <h3 id="reportTotalOrders" class="text-2xl font-black text-white mt-1">0</h3>
+                    </div>
+                    <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl">
+                        <span class="text-xs text-slate-400 font-medium">Total Items Sold</span>
+                        <h3 id="reportTotalItemsSold" class="text-2xl font-black text-emerald-400 mt-1">0</h3>
+                    </div>
+                    <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl">
+                        <span class="text-xs text-slate-400 font-medium">Active Shift Date</span>
+                        <h3 id="reportActiveDate" class="text-sm font-bold text-slate-300 mt-2 font-mono">--</h3>
+                    </div>
+                </div>
+
+                <!-- Itemized Quantities Sold Table -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl shadow-xl overflow-hidden mb-6">
+                    <div class="p-4 bg-slate-950/80 border-b border-slate-800 font-bold text-xs text-white flex items-center justify-between">
+                        <span>Itemized Quantity Sold Report (RTC Menu Sales)</span>
+                        <span class="text-[10px] text-slate-400">Accurate item counts for kitchen & restock</span>
+                    </div>
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="text-slate-400 text-[11px] uppercase tracking-wider border-b border-slate-800 bg-slate-950/40">
+                                <th class="p-3.5">Menu Item</th>
+                                <th class="p-3.5">Category</th>
+                                <th class="p-3.5">Unit Price</th>
+                                <th class="p-3.5">Quantity Sold</th>
+                                <th class="p-3.5 text-right">Total Revenue</th>
+                            </tr>
+                        </thead>
+                        <tbody id="itemizedSalesReportBody" class="divide-y divide-slate-800 text-xs">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ==================== TAB 5: MEDIA & LOGO MANAGER ==================== -->
+            <div id="tabContent-media" class="tab-content h-full hidden flex flex-col p-6 overflow-y-auto">
+                <div class="flex items-center justify-between mb-6 shrink-0">
+                    <div>
+                        <h2 class="text-xl font-black text-white tracking-tight">Media & Uploaded Images Manager</h2>
+                        <p class="text-xs text-slate-400 mt-0.5">Manage all custom logos and menu item images stored in the software</p>
+                    </div>
+                    <span id="mediaCountBadge" class="bg-orange-500/10 text-orange-400 text-xs px-3 py-1 rounded-xl border border-orange-500/20 font-bold">0 Images</span>
+                </div>
+
+                <div id="mediaGalleryGrid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- ==================== MODALS ==================== -->
+
+    <!-- 1. Add/Edit Menu Item Modal -->
+    <div id="menuItemModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-lg w-full shadow-2xl relative">
+            <h3 id="menuModalTitle" class="text-lg font-bold text-white mb-4">Add Menu Item</h3>
+            <form onsubmit="saveMenuItem(event)" class="space-y-4">
+                <input type="hidden" id="editMenuIndex" value="-1">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 mb-1">Item Name</label>
+                    <input type="text" id="modalItemName" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-orange-500">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">Category</label>
+                        <select id="modalItemCategory" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-orange-500">
+                            <option value="Burgers">Burgers</option>
+                            <option value="Broast">Broast</option>
+                            <option value="Deals">Deals</option>
+                            <option value="Beverages">Beverages</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">Price (PKR)</label>
+                        <input type="number" id="modalItemPrice" required min="0" step="1" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-orange-500">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 mb-1">Item Image (Upload File)</label>
+                    <div class="flex items-center gap-4">
+                        <div class="w-16 h-16 rounded-xl bg-slate-950 border border-slate-800 overflow-hidden flex items-center justify-center shrink-0">
+                            <img id="modalImagePreview" src="https://placehold.co/100x100/1e293b/f59e0b?text=Item" class="w-full h-full object-cover">
+                        </div>
+                        <input type="file" id="modalItemImageFile" accept="image/*" onchange="previewItemImage(event)" class="w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-orange-600 file:text-white hover:file:bg-orange-500 cursor-pointer">
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-2 pt-3">
+                    <button type="button" onclick="closeMenuItemModal()" class="bg-slate-800 text-slate-300 font-semibold px-4 py-2.5 rounded-xl text-xs hover:bg-slate-700">Cancel</button>
+                    <button type="submit" class="bg-orange-600 hover:bg-orange-500 text-white font-bold px-5 py-2.5 rounded-xl text-xs shadow-lg shadow-orange-600/30">Save Item</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 2. Settings & Logo Modal -->
+    <div id="settingsModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl relative">
+            <h3 class="text-lg font-bold text-white mb-4">Restaurant Logo & Address Settings</h3>
+            <form onsubmit="saveSettingsLogo(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 mb-2">Upload Restaurant Logo</label>
+                    <div class="flex items-center gap-4">
+                        <div class="w-16 h-16 rounded-xl bg-slate-950 border border-slate-800 overflow-hidden flex items-center justify-center shrink-0">
+                            <img id="settingsLogoPreview" src="https://placehold.co/100x100/1e293b/f59e0b?text=Logo" class="w-full h-full object-cover">
+                        </div>
+                        <input type="file" id="logoUploadInput" accept="image/*" onchange="handleLogoUploadInstant(event)" class="w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-orange-600 file:text-white hover:file:bg-orange-500 cursor-pointer">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 mb-1">Edit Restaurant Address</label>
+                    <textarea id="settingsAddressInput" rows="2" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-orange-500" placeholder="Enter restaurant address..."></textarea>
+                </div>
+
+                <div class="pt-2 flex justify-between items-center">
+                    <button type="button" onclick="resetDefaultLogo()" class="text-xs text-red-400 hover:text-red-300 font-medium">Reset Default Logo</button>
+                    <button type="submit" class="bg-orange-600 text-white font-bold px-4 py-2 rounded-xl text-xs shadow-lg shadow-orange-600/30">Save & Apply Settings</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 3. Add Inventory Modal -->
+    <div id="inventoryModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl relative">
+            <h3 class="text-lg font-bold text-white mb-4">Add Inventory Ingredient / Stock</h3>
+            <form onsave="saveInventoryItem(event)" onsubmit="saveInventoryItem(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 mb-1">Ingredient / Item Name</label>
+                    <input type="text" id="invName" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-orange-500" placeholder="e.g. Burger Buns, Chicken Fillet">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 mb-1">Category</label>
+                    <input type="text" id="invCategory" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-orange-500" placeholder="e.g. Bakery, Meat, Dairy">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">Stock Quantity</label>
+                        <input type="number" id="invQty" required min="0" step="1" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-orange-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">Unit (e.g. pcs, kg)</label>
+                        <input type="text" id="invUnit" required value="pcs" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-orange-500">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 mb-1">Unit Price (PKR)</label>
+                    <input type="number" id="invPrice" required min="0" step="1" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-orange-500">
+                </div>
+                <div class="flex justify-end gap-2 pt-3">
+                    <button type="button" onclick="closeInventoryModal()" class="bg-slate-800 text-slate-300 font-semibold px-4 py-2.5 rounded-xl text-xs">Cancel</button>
+                    <button type="submit" class="bg-orange-600 text-white font-bold px-5 py-2.5 rounded-xl text-xs">Save Stock</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Hidden Thermal Print Output Area -->
+    <div id="thermalPrintArea" class="hidden"></div>
+
+    <!-- ==================== APPLICATION LOGIC ==================== -->
+    <script>
+        const DEFAULT_LOGO = "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=200&q=80";
+        const DEFAULT_ADDRESS = "Pader Ground Okhai Colony Qasim Shah Road Near Hussissaini Masjid Keamari";
+
+        // Initial Menu Seed
+        const defaultMenu = [
+            { name: "Mighty Zinger Burger", category: "Burgers", price: 590, image: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=400&q=80", code: "ZING-01" },
+            { name: "Crispy Zinger Burger", category: "Burgers", price: 450, image: "https://images.unsplash.com/photo-1550547660-d9450f859349?auto=format&fit=crop&w=400&q=80", code: "ZING-02" },
+            { name: "Double Decker Zinger", category: "Burgers", price: 750, image: "https://images.unsplash.com/photo-1586190848861-99aa4a171e90?auto=format&fit=crop&w=400&q=80", code: "ZING-03" },
+            { name: "Spicy Jalapeno Burger", category: "Burgers", price: 520, image: "https://images.unsplash.com/photo-1572802419224-296b0aeee0d9?auto=format&fit=crop&w=400&q=80", code: "ZING-04" },
+            { name: "Fried Chicken Broast (2Pcs)", category: "Broast", price: 480, image: "https://images.unsplash.com/photo-1626645738196-c2a7c87a8f58?auto=format&fit=crop&w=400&q=80", code: "BR-01" },
+            { name: "Broast Bucket (8Pcs)", category: "Broast", price: 1750, image: "https://images.unsplash.com/photo-1527477396000-e27163b481c2?auto=format&fit=crop&w=400&q=80", code: "BR-02" },
+            { name: "Family Feast Deal", category: "Deals", price: 2199, image: "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=400&q=80", code: "DEAL-01" },
+            { name: "Zinger Crunch Meal", category: "Deals", price: 699, image: "https://images.unsplash.com/photo-1610440042657-612c34d95e4f?auto=format&fit=crop&w=400&q=80", code: "DEAL-02" },
+            { name: "Soft Drink 500ml", category: "Beverages", price: 120, image: "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=400&q=80", code: "BEV-01" },
+            { name: "Mineral Water", category: "Beverages", price: 80, image: "https://images.unsplash.com/photo-1548839140-29a749e1cf4d?auto=format&fit=crop&w=400&q=80", code: "BEV-02" }
+        ];
+
+        // Initial Inventory Seed
+        const defaultInventory = [
+            { name: "Chicken Breast Fillets", category: "Meat", qty: 150, unit: "pcs", price: 250 },
+            { name: "Burger Buns (Sesame)", category: "Bakery", qty: 200, unit: "pcs", price: 25 },
+            { name: "Cheddar Cheese Slices", category: "Dairy", qty: 120, unit: "pcs", price: 30 },
+            { name: "Iceberg Lettuce", category: "Vegetables", qty: 15, unit: "kg", price: 180 },
+            { name: "Mayonnaise & Special Sauce", category: "Sauces", qty: 25, unit: "liters", price: 400 },
+            { name: "Frying Oil", category: "Groceries", qty: 40, unit: "liters", price: 550 },
+            { name: "Soft Drink Bottles", category: "Beverages", qty: 95, unit: "pcs", price: 90 }
+        ];
+
+        // App State
+        let appState = {
+            currentUser: null,
+            logo: localStorage.getItem('mr_zinger_logo') || DEFAULT_LOGO,
+            address: localStorage.getItem('mr_zinger_address') || DEFAULT_ADDRESS,
+            menu: JSON.parse(localStorage.getItem('mr_zinger_menu')) || defaultMenu,
+            inventory: JSON.parse(localStorage.getItem('mr_zinger_inventory')) || defaultInventory,
+            cart: [],
+            dailySales: JSON.parse(localStorage.getItem('mr_zinger_sales')) || {
+                date: new Date().toLocaleDateString(),
+                totalOrders: 0,
+                totalRevenue: 0,
+                itemsSold: {} // item name -> count
+            },
+            posCategory: 'All'
+        };
+
+        window.onload = function() {
+            updateAllLogos();
+            checkExistingSession();
+        };
+
+        function updateAllLogos() {
+            document.getElementById('navLogoImg').src = appState.logo;
+            const logoPreview = document.getElementById('settingsLogoPreview');
+            if(logoPreview) logoPreview.src = appState.logo;
+            const addrDisplay = document.getElementById('navAddressDisplay');
+            if(addrDisplay) addrDisplay.innerText = appState.address;
+        }
+
+        function checkExistingSession() {
+            const savedUser = sessionStorage.getItem('mr_zinger_user');
+            if(savedUser) {
+                appState.currentUser = savedUser;
+                document.getElementById('loginScreen').classList.add('hidden');
+                document.getElementById('appWrapper').classList.remove('hidden');
+                initApp();
+            }
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const username = document.getElementById('loginUsername').value.trim();
+
+            if(username.toLowerCase() === 'admin') {
+                appState.currentUser = username;
+                sessionStorage.setItem('mr_zinger_user', username);
+                document.getElementById('loginScreen').classList.add('hidden');
+                document.getElementById('appWrapper').classList.remove('hidden');
+                initApp();
+                showToast("Welcome Faizan!", "Successfully logged into Mr. Zinger POS.");
+            } else {
+                document.getElementById('loginError').classList.remove('hidden');
+            }
+        }
+
+        function logout() {
+            sessionStorage.removeItem('mr_zinger_user');
+            appState.currentUser = null;
+            document.getElementById('appWrapper').classList.add('hidden');
+            document.getElementById('loginScreen').classList.remove('hidden');
+        }
+
+        function initApp() {
+            renderPosMenu();
+            renderMenuTable();
+            renderInventoryTable();
+            renderDailyReports();
+            renderMediaGallery();
+        }
+
+        // --- TOAST NOTIFICATIONS ---
+        function showToast(title, message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `max-w-xs w-full bg-slate-900 border ${type === 'success' ? 'border-orange-500/40' : 'border-red-500/40'} p-4 rounded-2xl shadow-2xl flex items-start gap-3 pointer-events-auto transform translate-y-2 opacity-0 transition-all duration-300`;
+            toast.innerHTML = `
+                <div class="w-8 h-8 rounded-xl ${type === 'success' ? 'bg-orange-500/20 text-orange-400' : 'bg-red-500/20 text-red-400'} flex items-center justify-center shrink-0">
+                    <i class="fa-solid ${type === 'success' ? 'fa-check' : 'fa-triangle-exclamation'}"></i>
+                </div>
+                <div class="flex-1">
+                    <h5 class="text-xs font-bold text-white">${title}</h5>
+                    <p class="text-[11px] text-slate-400 mt-0.5">${message}</p>
+                </div>
+            `;
+            container.appendChild(toast);
+            setTimeout(() => toast.classList.remove('translate-y-2', 'opacity-0'), 50);
+            setTimeout(() => {
+                toast.classList.add('translate-y-2', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+
+        // --- TAB NAVIGATION ---
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('bg-orange-600', 'text-white', 'shadow-md');
+                btn.classList.add('text-slate-400');
+            });
+
+            document.getElementById(`tabContent-${tabId}`).classList.remove('hidden');
+            const activeBtn = document.getElementById(`tabBtn-${tabId}`);
+            activeBtn.classList.add('bg-orange-600', 'text-white', 'shadow-md');
+            activeBtn.classList.remove('text-slate-400');
+
+            if(tabId === 'reports') renderDailyReports();
+            if(tabId === 'media') renderMediaGallery();
+            if(tabId === 'inventory') renderInventoryTable();
+        }
+
+        // --- POS TERMINAL & CART ---
+        function setPosCategory(cat) {
+            appState.posCategory = cat;
+            document.querySelectorAll('.pos-cat-btn').forEach(btn => {
+                if(btn.innerText.includes(cat) || (cat === 'All' && btn.innerText.includes('All'))) {
+                    btn.className = "pos-cat-btn px-3 py-2 rounded-xl text-xs font-bold bg-orange-600 text-white shrink-0 transition";
+                } else {
+                    btn.className = "pos-cat-btn px-3 py-2 rounded-xl text-xs font-semibold bg-slate-900 text-slate-400 hover:text-white shrink-0 transition";
+                }
+            });
+            renderPosMenu();
+        }
+
+        function renderPosMenu() {
+            const grid = document.getElementById('posMenuGrid');
+            grid.innerHTML = '';
+            const search = document.getElementById('posSearch').value.toLowerCase();
+
+            const filtered = appState.menu.filter(item => {
+                const matchCat = appState.posCategory === 'All' || item.category === appState.posCategory;
+                const matchSearch = item.name.toLowerCase().includes(search) || item.category.toLowerCase().includes(search);
+                return matchCat && matchSearch;
+            });
+
+            if(filtered.length === 0) {
+                grid.innerHTML = `<div class="col-span-full py-12 text-center text-slate-500 text-xs">No menu items found.</div>`;
+                return;
+            }
+
+            filtered.forEach(item => {
+                const card = document.createElement('div');
+                card.className = "bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden hover:border-orange-500/50 transition cursor-pointer flex flex-col justify-between group shadow-md";
+                card.onclick = () => addToCart(item);
+                card.innerHTML = `
+                    <div class="h-28 bg-slate-950 overflow-hidden relative">
+                        <img src="${item.image}" onerror="this.src='https://placehold.co/200x200/1e293b/f59e0b?text=Item'" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
+                        <span class="absolute top-2 left-2 bg-slate-950/80 backdrop-blur-md text-[10px] text-orange-400 font-bold px-2 py-0.5 rounded-lg border border-slate-800">${item.category}</span>
+                    </div>
+                    <div class="p-3">
+                        <h4 class="font-bold text-xs text-white truncate">${item.name}</h4>
+                        <div class="flex items-center justify-between mt-2">
+                            <span class="font-mono font-extrabold text-orange-400 text-xs">Rs. ${item.price}</span>
+                            <span class="w-7 h-7 rounded-xl bg-orange-600/20 text-orange-400 flex items-center justify-center group-hover:bg-orange-600 group-hover:text-white transition"><i class="fa-solid fa-plus text-[10px]"></i></span>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function filterPosMenu() {
+            renderPosMenu();
+        }
+
+        function addToCart(item) {
+            const existing = appState.cart.find(c => c.name === item.name);
+            if(existing) {
+                existing.qty++;
+            } else {
+                appState.cart.push({ ...item, qty: 1 });
+            }
+            renderCart();
+        }
+
+        function updateCartQty(name, delta) {
+            const item = appState.cart.find(c => c.name === name);
+            if(item) {
+                item.qty += delta;
+                if(item.qty <= 0) {
+                    appState.cart = appState.cart.filter(c => c.name !== name);
+                }
+            }
+            renderCart();
+        }
+
+        function clearCart() {
+            appState.cart = [];
+            renderCart();
+        }
+
+        function renderCart() {
+            const list = document.getElementById('cartItemsList');
+            list.innerHTML = '';
+
+            if(appState.cart.length === 0) {
+                list.innerHTML = `
+                    <div class="h-full flex flex-col items-center justify-center text-center text-slate-500 py-12">
+                        <i class="fa-solid fa-burger text-4xl mb-3 text-slate-700"></i>
+                        <p class="text-xs font-medium">Cart is empty</p>
+                        <p class="text-[10px] text-slate-600 mt-1">Tap any menu item to add to order</p>
+                    </div>
+                `;
+                document.getElementById('cartSubtotal').innerText = 'Rs. 0';
+                document.getElementById('cartTotal').innerText = 'Rs. 0';
+                return;
+            }
+
+            let subtotal = 0;
+            appState.cart.forEach(item => {
+                const itemTotal = item.price * item.qty;
+                subtotal += itemTotal;
+
+                const div = document.createElement('div');
+                div.className = "bg-slate-950 border border-slate-800/80 p-3 rounded-xl flex items-center justify-between";
+                div.innerHTML = `
+                    <div class="flex-1 pr-2">
+                        <h5 class="text-xs font-bold text-white truncate">${item.name}</h5>
+                        <p class="text-[10px] font-mono text-orange-400 mt-0.5">Rs. ${item.price} × ${item.qty} = Rs. ${itemTotal}</p>
+                    </div>
+                    <div class="flex items-center space-x-1.5 shrink-0">
+                        <button onclick="updateCartQty('${item.name}', -1)" class="w-6 h-6 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 flex items-center justify-center text-xs"><i class="fa-solid fa-minus"></i></button>
+                        <span class="w-6 text-center font-mono text-xs font-bold text-white">${item.qty}</span>
+                        <button onclick="updateCartQty('${item.name}', 1)" class="w-6 h-6 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 flex items-center justify-center text-xs"><i class="fa-solid fa-plus"></i></button>
+                    </div>
+                `;
+                list.appendChild(div);
+            });
+
+            document.getElementById('cartSubtotal').innerText = `Rs. ${subtotal}`;
+            document.getElementById('cartTotal').innerText = `Rs. ${subtotal}`;
+        }
+
+        // --- CHECKOUT & THERMAL PRINTING ---
+        function processCheckout() {
+            if(appState.cart.length === 0) {
+                showToast("Empty Cart", "Please add items to cart before checkout.", "error");
+                return;
+            }
+
+            let totalAmount = 0;
+            appState.cart.forEach(item => {
+                totalAmount += item.price * item.qty;
+                // Update Daily Sales Itemized breakdown
+                if(!appState.dailySales.itemsSold[item.name]) {
+                    appState.dailySales.itemsSold[item.name] = { qty: 0, revenue: 0, category: item.category, price: item.price };
+                }
+                appState.dailySales.itemsSold[item.name].qty += item.qty;
+                appState.dailySales.itemsSold[item.name].revenue += item.price * item.qty;
+            });
+
+            appState.dailySales.totalOrders += 1;
+            appState.dailySales.totalRevenue += totalAmount;
+            localStorage.setItem('mr_zinger_sales', JSON.stringify(appState.dailySales));
+
+            // Trigger Thermal Receipt Printing (Exactly 2-page print layout or concise 80mm thermal receipt)
+            executeThermalPrint(appState.cart, totalAmount);
+
+            showToast("Order Successful!", `Bill printed & Rs. ${totalAmount} recorded.`);
+            appState.cart = [];
+            renderCart();
+        }
+
+        function executeThermalPrint(cartItems, totalAmount) {
+            const printArea = document.getElementById('thermalPrintArea');
+            const orderNum = Math.floor(1000 + Math.random() * 9000);
+            const nowStr = new Date().toLocaleString();
+
+            let itemsHtml = '';
+            cartItems.forEach(i => {
+                itemsHtml += `
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 11px;">
+                        <span>${i.qty}x ${i.name}</span>
+                        <span>Rs. ${i.price * i.qty}</span>
+                    </div>
+                `;
+            });
+
+            // Thermal Print template with address placed neatly at the top
+            printArea.innerHTML = `
+                <div style="text-align: center; font-family: 'Courier New', Courier, monospace; font-size: 11px; width: 80mm; background: white; color: black; padding: 10px; line-height: 1.3;">
+                    <div style="font-weight: bold; font-size: 16px; margin-bottom: 2px;">MR. ZINGER</div>
+                    <div style="font-size: 9px; margin-bottom: 2px;">Address: ${appState.address}</div>
+                    <div style="font-size: 10px; font-weight: bold; margin-bottom: 6px;">Contact: 03223775671</div>
+                    <div style="border-bottom: 1px dashed black; margin-bottom: 6px;"></div>
+                    <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 4px;">
+                        <span>Order #: ${orderNum}</span>
+                        <span>Cashier: Faizan Junejo</span>
+                    </div>
+                    <div style="font-size: 11px; margin-bottom: 8px;">Date: ${nowStr}</div>
+                    <div style="border-bottom: 1px dashed black; margin-bottom: 6px;"></div>
+                    <div style="font-weight: bold; margin-bottom: 4px; text-align: left;">ITEMS</div>
+                    ${itemsHtml}
+                    <div style="border-bottom: 1px dashed black; margin-top: 6px; margin-bottom: 6px;"></div>
+                    <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 13px;">
+                        <span>TOTAL:</span>
+                        <span>Rs. ${totalAmount}</span>
+                    </div>
+                    <div style="border-bottom: 1px dashed black; margin-top: 6px; margin-bottom: 6px;"></div>
+                    <div style="text-align: center; font-size: 10px; margin-top: 8px;">
+                        <div>Thank you for dining with us!</div>
+                        <div>Always at your service.</div>
+                    </div>
+                </div>
+            `;
+
+            // Ensure print area is temporarily visible for compilation / rendering
+            printArea.style.display = 'block';
+
+            // Slight timeout to ensure DOM is painted before triggering browser print dialog
+            setTimeout(() => {
+                window.print();
+                printArea.style.display = 'none';
+            }, 100);
+        }
+
+        // --- MENU MANAGEMENT & IMAGE UPLOADS ---
+        function renderMenuTable() {
+            const tbody = document.getElementById('menuTableBody');
+            tbody.innerHTML = '';
+
+            appState.menu.forEach((item, idx) => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-800/40 transition border-b border-slate-800/60";
+                tr.innerHTML = `
+                    <td class="p-3">
+                        <div class="w-12 h-12 rounded-xl bg-slate-950 overflow-hidden border border-slate-700 flex items-center justify-center">
+                            <img src="${item.image}" onerror="this.src='https://placehold.co/100x100/1e293b/f59e0b?text=Item'" class="w-full h-full object-cover">
+                        </div>
+                    </td>
+                    <td class="p-3 font-bold text-white">${item.name}</td>
+                    <td class="p-3"><span class="bg-slate-800 text-orange-400 px-2.5 py-1 rounded-lg text-[10px] font-semibold">${item.category}</span></td>
+                    <td class="p-3 font-extrabold text-emerald-400 font-mono">Rs. ${item.price}</td>
+                    <td class="p-3 font-mono text-slate-400 text-[11px]">${item.code || 'ZING-' + (idx+10)}</td>
+                    <td class="p-3 text-right space-x-2">
+                        <button onclick="editMenuItem(${idx})" class="text-blue-400 hover:text-blue-300 p-1.5 rounded-lg bg-blue-500/10"><i class="fa-solid fa-pen"></i></button>
+                        <button onclick="deleteMenuItem(${idx})" class="text-red-400 hover:text-red-300 p-1.5 rounded-lg bg-red-500/10"><i class="fa-solid fa-trash-can"></i></button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function openMenuItemModal(idx = -1) {
+            document.getElementById('editMenuIndex').value = idx;
+            const modal = document.getElementById('menuItemModal');
+            const title = document.getElementById('menuModalTitle');
+            
+            if(idx === -1) {
+                title.innerText = "Add New Menu Item";
+                document.getElementById('modalItemName').value = '';
+                document.getElementById('modalItemPrice').value = '';
+                document.getElementById('modalItemCategory').value = 'Burgers';
+                document.getElementById('modalImagePreview').src = "https://placehold.co/100x100/1e293b/f59e0b?text=Item";
+                document.getElementById('modalItemImageFile').value = '';
+            } else {
+                title.innerText = "Edit Menu Item";
+                const item = appState.menu[idx];
+                document.getElementById('modalItemName').value = item.name;
+                document.getElementById('modalItemPrice').value = item.price;
+                document.getElementById('modalItemCategory').value = item.category;
+                document.getElementById('modalImagePreview').src = item.image;
+            }
+            modal.classList.remove('hidden');
+        }
+
+        function closeMenuItemModal() {
+            document.getElementById('menuItemModal').classList.add('hidden');
+        }
+
+        function previewItemImage(e) {
+            const file = e.target.files[0];
+            if(file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    document.getElementById('modalImagePreview').src = event.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function saveMenuItem(e) {
+            e.preventDefault();
+            const idx = parseInt(document.getElementById('editMenuIndex').value);
+            const name = document.getElementById('modalItemName').value.trim();
+            const category = document.getElementById('modalItemCategory').value;
+            const price = parseFloat(document.getElementById('modalItemPrice').value);
+            const image = document.getElementById('modalImagePreview').src;
+
+            if(idx === -1) {
+                appState.menu.push({
+                    name,
+                    category,
+                    price,
+                    image,
+                    code: 'ZING-' + (appState.menu.length + 10)
+                });
+                showToast("Item Added", `${name} added to menu successfully.`);
+            } else {
+                appState.menu[idx] = {
+                    ...appState.menu[idx],
+                    name,
+                    category,
+                    price,
+                    image
+                };
+                showToast("Item Updated", `${name} updated successfully.`);
+            }
+
+            localStorage.setItem('mr_zinger_menu', JSON.stringify(appState.menu));
+            closeMenuItemModal();
+            renderMenuTable();
+            renderPosMenu();
+            renderMediaGallery();
+        }
+
+        function editMenuItem(idx) {
+            openMenuItemModal(idx);
+        }
+
+        function deleteMenuItem(idx) {
+            if(confirm("Are you sure you want to delete this menu item?")) {
+                const item = appState.menu[idx];
+                appState.menu.splice(idx, 1);
+                localStorage.setItem('mr_zinger_menu', JSON.stringify(appState.menu));
+                renderMenuTable();
+                renderPosMenu();
+                renderMediaGallery();
+                showToast("Item Deleted", `${item.name} removed from menu.`, "error");
+            }
+        }
+
+        // --- INVENTORY MODULE ---
+        function renderInventoryTable() {
+            const tbody = document.getElementById('inventoryTableBody');
+            tbody.innerHTML = '';
+
+            let totalVal = 0;
+            let lowStockCount = 0;
+
+            appState.inventory.forEach((inv, idx) => {
+                totalVal += inv.qty * inv.price;
+                if(inv.qty < 20) lowStockCount++;
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-800/40 transition border-b border-slate-800/60";
+                tr.innerHTML = `
+                    <td class="p-3 font-bold text-white">${inv.name}</td>
+                    <td class="p-3"><span class="bg-slate-800 text-slate-300 px-2.5 py-1 rounded-lg text-[10px] font-semibold">${inv.category}</span></td>
+                    <td class="p-3 font-mono font-bold ${inv.qty < 20 ? 'text-amber-400' : 'text-emerald-400'}">${inv.qty}</td>
+                    <td class="p-3 text-slate-400">${inv.unit}</td>
+                    <td class="p-3 font-mono text-slate-300">Rs. ${inv.price}</td>
+                    <td class="p-3">
+                        <span class="px-2 py-0.5 rounded-md text-[10px] font-bold ${inv.qty < 20 ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'}">
+                            ${inv.qty < 20 ? 'Low Stock' : 'In Stock'}
+                        </span>
+                    </td>
+                    <td class="p-3 text-right space-x-2">
+                        <button onclick="adjustInventory(${idx}, 10)" class="text-emerald-400 hover:text-emerald-300 px-2 py-1 rounded-lg bg-emerald-500/10 text-[10px] font-bold">+10 Add</button>
+                        <button onclick="deleteInventory(${idx})" class="text-red-400 hover:text-red-300 p-1 rounded-lg bg-red-500/10"><i class="fa-solid fa-trash-can"></i></button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('invTotalCount').innerText = appState.inventory.length;
+            document.getElementById('invLowStockCount').innerText = lowStockCount;
+            document.getElementById('invTotalVal').innerText = `Rs. ${totalVal.toLocaleString()}`;
+        }
+
+        function openInventoryModal() {
+            document.getElementById('invName').value = '';
+            document.getElementById('invCategory').value = '';
+            document.getElementById('invQty').value = '';
+            document.getElementById('invPrice').value = '';
+            document.getElementById('inventoryModal').classList.remove('hidden');
+        }
+
+        function closeInventoryModal() {
+            document.getElementById('inventoryModal').classList.add('hidden');
+        }
+
+        function saveInventoryItem(e) {
+            e.preventDefault();
+            const name = document.getElementById('invName').value.trim();
+            const category = document.getElementById('invCategory').value.trim();
+            const qty = parseInt(document.getElementById('invQty').value);
+            const unit = document.getElementById('invUnit').value.trim();
+            const price = parseFloat(document.getElementById('invPrice').value);
+
+            appState.inventory.push({ name, category, qty, unit, price });
+            localStorage.setItem('mr_zinger_inventory', JSON.stringify(appState.inventory));
+            closeInventoryModal();
+            renderInventoryTable();
+            showToast("Inventory Saved", `${name} added successfully.`);
+        }
+
+        function adjustInventory(idx, amount) {
+            appState.inventory[idx].qty += amount;
+            localStorage.setItem('mr_zinger_inventory', JSON.stringify(appState.inventory));
+            renderInventoryTable();
+            showToast("Stock Updated", `${appState.inventory[idx].name} updated.`);
+        }
+
+        function deleteInventory(idx) {
+            if(confirm("Delete this inventory item?")) {
+                appState.inventory.splice(idx, 1);
+                localStorage.setItem('mr_zinger_inventory', JSON.stringify(appState.inventory));
+                renderInventoryTable();
+                showToast("Deleted", "Ingredient removed.", "error");
+            }
+        }
+
+        // --- DAILY REPORTS & Z-REPORT ---
+        function renderDailyReports() {
+            document.getElementById('reportTotalSales').innerText = `Rs. ${appState.dailySales.totalRevenue.toLocaleString()}`;
+            document.getElementById('reportTotalOrders').innerText = appState.dailySales.totalOrders;
+            document.getElementById('reportActiveDate').innerText = appState.dailySales.date;
+
+            let totalItemsSold = 0;
+            const tbody = document.getElementById('itemizedSalesReportBody');
+            tbody.innerHTML = '';
+
+            const itemsSoldMap = appState.dailySales.itemsSold;
+            const keys = Object.keys(itemsSoldMap);
+
+            if(keys.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-slate-500">No sales recorded yet for today's shift.</td></tr>`;
+                document.getElementById('reportTotalItemsSold').innerText = '0';
+                return;
+            }
+
+            keys.forEach(itemName => {
+                const data = itemsSoldMap[itemName];
+                totalItemsSold += data.qty;
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-800/40 transition border-b border-slate-800/60";
+                tr.innerHTML = `
+                    <td class="p-3 font-bold text-white">${itemName}</td>
+                    <td class="p-3"><span class="bg-slate-800 text-orange-400 px-2 py-0.5 rounded text-[10px]">${data.category}</span></td>
+                    <td class="p-3 font-mono text-slate-300">Rs. ${data.price}</td>
+                    <td class="p-3 font-mono font-bold text-emerald-400">${data.qty} units</td>
+                    <td class="p-3 font-mono font-extrabold text-white text-right">Rs. ${data.revenue.toLocaleString()}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('reportTotalItemsSold').innerText = totalItemsSold;
+        }
+
+        function printDailySalesReport() {
+            window.print();
+        }
+
+        function resetDailySales() {
+            if(confirm("Are you sure you want to end shift and reset today's sales report?")) {
+                appState.dailySales = {
+                    date: new Date().toLocaleDateString(),
+                    totalOrders: 0,
+                    totalRevenue: 0,
+                    itemsSold: {}
+                };
+                localStorage.setItem('mr_zinger_sales', JSON.stringify(appState.dailySales));
+                renderDailyReports();
+                showToast("Shift Reset", "Daily sales report has been reset for new shift.", "error");
+            }
+        }
+
+        // --- MEDIA & LOGO MODULE ---
+        let tempUploadedLogo = null;
+
+        function handleLogoUploadInstant(e) {
+            const file = e.target.files[0];
+            if(file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    tempUploadedLogo = event.target.result;
+                    document.getElementById('settingsLogoPreview').src = tempUploadedLogo;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function saveSettingsLogo(e) {
+            e.preventDefault();
+            const newAddress = document.getElementById('settingsAddressInput').value.trim();
+            if(newAddress) {
+                appState.address = newAddress;
+                localStorage.setItem('mr_zinger_address', appState.address);
+            }
+            if(tempUploadedLogo) {
+                appState.logo = tempUploadedLogo;
+                localStorage.setItem('mr_zinger_logo', appState.logo);
+            }
+            updateAllLogos();
+            closeSettingsModal();
+            renderMediaGallery();
+            showToast("Settings Updated", "Logo and restaurant address saved successfully.");
+        }
+
+        function resetDefaultLogo() {
+            appState.logo = DEFAULT_LOGO;
+            appState.address = DEFAULT_ADDRESS;
+            tempUploadedLogo = null;
+            localStorage.removeItem('mr_zinger_logo');
+            localStorage.removeItem('mr_zinger_address');
+            updateAllLogos();
+            document.getElementById('settingsLogoPreview').src = DEFAULT_LOGO;
+            document.getElementById('settingsAddressInput').value = DEFAULT_ADDRESS;
+            renderMediaGallery();
+            showToast("Reset Done", "Restored default restaurant logo and address.", "error");
+        }
+
+        function openSettingsModal() {
+            tempUploadedLogo = appState.logo;
+            document.getElementById('settingsLogoPreview').src = appState.logo;
+            document.getElementById('logoUploadInput').value = '';
+            document.getElementById('settingsAddressInput').value = appState.address;
+            document.getElementById('settingsModal').classList.remove('hidden');
+        }
+
+        function closeSettingsModal() {
+            document.getElementById('settingsModal').classList.add('hidden');
+        }
+
+        function renderMediaGallery() {
+            const grid = document.getElementById('mediaGalleryGrid');
+            grid.innerHTML = '';
+
+            const images = [{ type: 'Restaurant Logo', name: 'Primary Logo', url: appState.logo }];
+            appState.menu.forEach((item, idx) => {
+                images.push({ type: 'Menu Item', name: item.name, url: item.image, index: idx });
+            });
+
+            document.getElementById('mediaCountBadge').innerText = `${images.length} Images`;
+
+            images.forEach((imgObj) => {
+                const card = document.createElement('div');
+                card.className = "bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow group flex flex-col justify-between";
+                card.innerHTML = `
+                    <div class="h-28 bg-slate-950 overflow-hidden relative">
+                        <img src="${imgObj.url}" onerror="this.src='https://placehold.co/100x100/1e293b/f59e0b?text=Img'" class="w-full h-full object-cover">
+                        <span class="absolute top-1.5 left-1.5 bg-slate-950/80 backdrop-blur-md text-[9px] text-orange-400 font-bold px-2 py-0.5 rounded border border-slate-800">${imgObj.type}</span>
+                    </div>
+                    <div class="p-3">
+                        <span class="text-xs text-slate-200 font-semibold truncate block">${imgObj.name}</span>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+    </script>
+<script>
+        // Register the PWA service worker (requires HTTPS or localhost).
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js').catch(err => console.warn('PWA service worker:', err));
+            });
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+ <rect width="512" height="512" rx="112" fill="#020617"/>
+ <rect x="22" y="22" width="468" height="468" rx="96" fill="#ea580c"/>
+ <path d="M108 220c12-58 65-99 148-99s136 41 148 99H108Z" fill="#fef3c7"/>
+ <path d="M100 242h312v42H100z" fill="#7c2d12"/>
+ <path d="M112 302c0-12 10-22 22-22h244c12 0 22 10 22 22 0 47-38 85-85 85H197c-47 0-85-38-85-85Z" fill="#fef3c7"/>
+ <path d="M150 188l-10-18m72-18-4-20m78 19 6-20m67 37 13-17" stroke="#7c2d12" stroke-width="12" stroke-linecap="round"/>
+ <text x="256" y="454" text-anchor="middle" font-family="Arial,sans-serif" font-size="44" font-weight="900" fill="#fff">MZ POS</text>
+</svg>
